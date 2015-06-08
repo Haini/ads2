@@ -17,9 +17,6 @@ import java.util.*;
 
 public class CFLP extends AbstractCFLP {
 
-	public CFLP(CFLPInstance instance) {
-		// TODO: Hier ist der richtige Platz fuer Initialisierungen
-
         /* List of Customers, sorted by Bandwithneed */
         int[] customers;
 
@@ -30,16 +27,26 @@ public class CFLP extends AbstractCFLP {
         int[][] distanceCosts;
 
         /* Get all the values from instance. */
-        int customer_cnt = instance.getNumCustomers();
-        int facility_cnt = instance.getNumFacilities();
-        int distanceCost_cnt = instance.distances.length;
-        /* Step one: Calculate the best faciliy (e.g lowest distance ?!) for every customer */
+        int customer_cnt, facility_cnt, distanceCost_cnt;
 
+        /* Better make a copy of instance obviously */
+        CFLPInstance instance;
 
+	public CFLP(CFLPInstance instance) {
+		// TODO: Hier ist der richtige Platz fuer Initialisierungen
+
+        this.instance = instance;
+
+        customer_cnt = instance.getNumCustomers();
+        facility_cnt = instance.getNumFacilities();
+        distanceCost_cnt = instance.distances.length;
+
+        /* Init all the things */
         facilities = new int[customer_cnt][facility_cnt];
         customers = new int[customer_cnt];
         distanceCosts = new int[distanceCost_cnt][instance.distances[0].length];
 
+        /* Step one: Calculate the best faciliy (e.g lowest distance ?!) for every customer */
         for (int i = 0; i < customer_cnt; i++) {
             int[] facility_index = new int[facility_cnt];
 
@@ -100,13 +107,98 @@ public class CFLP extends AbstractCFLP {
         }
 	}
 
+    /*
+        * Eingabe: Problem P
+        *           - Wird beschrieben durch die Anzahl der Kunden pro Node, die verfuegbare Bandbreite pro Node.
+        *           - Das war es eigentlich schon, da wir aber rekursiv aufrufen wollen gibt es noch:
+        *               -
+        * Ausgabe: Beste gueltige Loesung U (und globale obere Schranke)
+        * Variablen: Liste offerne Probleme; lokale untere Schranke; lokale heuristische Loesung
+        *
+         */
 
-    private void branchAndBound() {
+    private void branchAndBound(int[] customersNode, int[] bandwithNode, int[] sol, int solLength, int currentCost) {
+
+        /* Bounding. */
+
+        /* Berechne fuer P' lokale untere Schranke L' mit Dualheuristik (e.g FirstFit). */
+        int lowerBound = lowerBound(customersNode, bandwithNode, sol, solLength, currentCost);
+
+        /* Fall L' >= U braucht nicht weiter verfolgt werden */
+        if(getBestSolution() != null) {
+            if (!(getBestSolution().getUpperBound() > lowerBound)) {
+                return;
+            }
+        } else
+
+        /* Falls L' < U dann */
+        solLength += 1;
+        if(solLength >= sol.length) {
+            System.out.println("Obere Schranke: " + currentCost);
+            setSolution(currentCost, sol);
+            return;
+        }
+
+        int customer = customers[solLength];
+
+        for(int i = 0; i < facility_cnt; i++) {
+            int fac_temp = facilities[customer][i];
+            if(customersNode[fac_temp] > 0 && bandwithNode[fac_temp] >= instance.bandwidthOf(customer)) {
+                lowerBound = instance.distance(fac_temp, customer) * instance.distanceCosts;
+                if(bandwithNode[fac_temp] == instance.maxBandwidth) {
+                    lowerBound += instance.openingCostsFor(fac_temp);
+                }
+                sol[customer] = fac_temp;
+
+                bandwithNode[fac_temp] -= instance.bandwidthOf(customer);
+                customersNode[fac_temp]--;
+
+                branchAndBound(customersNode, bandwithNode, sol, solLength, lowerBound + currentCost);
+
+                bandwithNode[fac_temp] += instance.bandwidthOf(customer);
+                customersNode[fac_temp]++;
+            }
+
+        }
+           /* - berechne fuer P' gueltige heuristische Loesung --> obere Schranke U'
+            - falls U' < U dann
+                - U = U' --> neue beste Loesung
+                - entferne aus PI alle Subprobleme mit lokaler unterer Schranke >= U
+         */
+
+        /* Fall L' >= U braucht nicht weiter verfolgt werden */
+
+        /* Falls L' < U dann
+            - Branching von P' in P1...Pk
+          */
 
     }
 
-    private int lowerBound() {
-        
+
+    private int lowerBound(int[] customersNode, int[] bandwithNode, int[] sol, int solLength, int currentCost) {
+        int lowerBound = currentCost;
+
+        for(int i = solLength + 1; i < sol.length; i++) {
+            /* Select next customer and assign it to a Node. */
+            int smallestFacIndex = 0;
+            int customer = customers[i];
+            int smallestFac = facilities[customer][smallestFacIndex];
+
+            while((bandwithNode[smallestFac] < instance.bandwidthOf(customer) || customersNode[smallestFac] == 0) && smallestFacIndex < facilities[customer].length-1) {
+                smallestFacIndex++;
+                smallestFac = facilities[customer][smallestFacIndex];
+            }
+            lowerBound+=instance.distance(smallestFac, customer) * instance.distanceCosts;
+
+            /* Which customer? Just the next customer, as we already did sort them by bandwith need. */
+//            int fIndex = facilities[i][0];
+            /* Just pick the closest facility and ignore the constraints. */
+ //           lowerBound += instance.distance(fIndex, i) * instance.distanceCosts;
+
+
+        }
+        /* Return this baaaad lowerBound */
+        return lowerBound;
     }
 
 	/**
@@ -122,6 +214,16 @@ public class CFLP extends AbstractCFLP {
 	@Override
 	public void run() {
 		// TODO: Diese Methode ist von Ihnen zu implementieren
+
+        /* Init all the things. */
+        int[] bandwithNode = new int[facility_cnt];
+        int[] customersNode = instance.maxCustomers.clone();
+        int[] sol = new int[customer_cnt];
+        Arrays.fill(sol, -1);
+        Arrays.fill(bandwithNode, instance.maxBandwidth);
+        /* Start all the recursions! */
+
+        branchAndBound(customersNode, bandwithNode, sol, -1, 0 );
         Main.printDebug("Hello World!");
 
 
