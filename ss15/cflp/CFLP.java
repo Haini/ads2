@@ -1,4 +1,4 @@
-package ss15.cflp;
+package ads2.ss15.cflp;
 
 /**
  * Klasse zum Berechnen der L&ouml;sung mittels Branch-and-Bound.
@@ -55,10 +55,7 @@ public class CFLP extends AbstractCFLP {
             }
 
             /* Now sort facility_index in correspondence to the distance of the facilities to the current customer. */
-            int best_fac_tmp = 0;
-            int loop_cnt = 0;
 
-            System.out.println("Customer "+i+": " + Arrays.toString(facility_index));
 
             /* Bubble Sort */
             for(int j = 0; j < facility_cnt; j++) {
@@ -72,11 +69,11 @@ public class CFLP extends AbstractCFLP {
             }
 
             /* Copy the ordered facility_index into the [][] facilities and assign the customer */
-            for(int j = 0; j < facility_cnt; j++) {
-                facilities[i][j] = facility_index[j];
+            for(int j = facility_cnt-1; j >= 0; j--) {
+                facilities[i][facility_cnt-j-1] = facility_index[j];
             }
 
-            System.out.println("Customer "+i+": " + Arrays.toString(facility_index));
+            //System.out.println("Customer "+i+": " + Arrays.toString(facilities[i]));
         }
 
         /* Step two: Get the customers with the biggest need of bandwith and sort them descending */
@@ -96,8 +93,12 @@ public class CFLP extends AbstractCFLP {
                 }
         }
 
-        System.out.println("Customer Bandwith: " + Arrays.toString(customers));
 
+        //System.out.println("Customer Bandwith: " + Arrays.toString(customers));
+        //System.out.print("Customer Bandwith: [");
+       // for(int i = 0; i < customer_cnt; i++) {
+        //    System.out.print(instance.bandwidthOf(customers[i])+"," );
+        //}
         /* Step three: Calculate the real distance costs (distance between customer and facility * distanceCost */
 
         for(int i = 0; i < distanceCosts.length; i++) {
@@ -129,34 +130,35 @@ public class CFLP extends AbstractCFLP {
             if (!(getBestSolution().getUpperBound() > lowerBound)) {
                 return;
             }
-        } else
+        }
 
         /* Falls L' < U dann */
-        solLength += 1;
-        if(solLength >= sol.length) {
-            System.out.println("Obere Schranke: " + currentCost);
+        solLength++;
+        if(solLength == sol.length) {
+            //System.out.println("Obere Schranke: " + currentCost);
             setSolution(currentCost, sol);
             return;
         }
 
         int customer = customers[solLength];
 
-        for(int i = 0; i < facility_cnt; i++) {
-            int fac_temp = facilities[customer][i];
-            if(customersNode[fac_temp] > 0 && bandwithNode[fac_temp] >= instance.bandwidthOf(customer)) {
-                lowerBound = instance.distance(fac_temp, customer) * instance.distanceCosts;
-                if(bandwithNode[fac_temp] == instance.maxBandwidth) {
-                    lowerBound += instance.openingCostsFor(fac_temp);
+        for(int facility : facilities[customer]) {
+
+            if(customersNode[facility] > 0 && bandwithNode[facility] >= instance.bandwidthOf(customer)) {
+                int nextLowerBound = instance.distance(facility, customer) * instance.distanceCosts;
+                if(bandwithNode[facility] == instance.maxBandwidth) {
+                    nextLowerBound += instance.openingCostsFor(facility);
                 }
-                sol[customer] = fac_temp;
 
-                bandwithNode[fac_temp] -= instance.bandwidthOf(customer);
-                customersNode[fac_temp]--;
+                sol[customer] = facility;
 
-                branchAndBound(customersNode, bandwithNode, sol, solLength, lowerBound + currentCost);
+                bandwithNode[facility] -= instance.bandwidthOf(customer);
+                customersNode[facility]--;
 
-                bandwithNode[fac_temp] += instance.bandwidthOf(customer);
-                customersNode[fac_temp]++;
+                branchAndBound(customersNode, bandwithNode, sol, solLength, nextLowerBound + currentCost);
+
+                bandwithNode[facility] += instance.bandwidthOf(customer);
+                customersNode[facility]++;
             }
 
         }
@@ -176,6 +178,7 @@ public class CFLP extends AbstractCFLP {
 
 
     private int lowerBound(int[] customersNode, int[] bandwithNode, int[] sol, int solLength, int currentCost) {
+
         int lowerBound = currentCost;
 
         for(int i = solLength + 1; i < sol.length; i++) {
@@ -188,7 +191,8 @@ public class CFLP extends AbstractCFLP {
                 smallestFacIndex++;
                 smallestFac = facilities[customer][smallestFacIndex];
             }
-            lowerBound+=instance.distance(smallestFac, customer) * instance.distanceCosts;
+            lowerBound += distanceCosts[smallestFac][customer];
+            //lowerBound+=instance.distance(smallestFac, customer) * instance.distanceCosts;
 
             /* Which customer? Just the next customer, as we already did sort them by bandwith need. */
 //            int fIndex = facilities[i][0];
@@ -200,6 +204,7 @@ public class CFLP extends AbstractCFLP {
         /* Return this baaaad lowerBound */
         return lowerBound;
     }
+
 
 	/**
 	 * Diese Methode bekommt vom Framework maximal 30 Sekunden Zeit zur
@@ -222,7 +227,6 @@ public class CFLP extends AbstractCFLP {
         Arrays.fill(sol, -1);
         Arrays.fill(bandwithNode, instance.maxBandwidth);
         /* Start all the recursions! */
-
         branchAndBound(customersNode, bandwithNode, sol, -1, 0 );
         Main.printDebug("Hello World!");
 
