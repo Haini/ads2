@@ -45,15 +45,22 @@ public class Main {
 	private static boolean debug = false;
 	
 	/**
+	 * Privater Konstruktor.
+	 *
+	 */
+	private Main() {
+	}
+
+	/**
 	 * Liest die Daten einer Testinstanz ein und &uuml;bergibt sie an die
 	 * entsprechenden Methoden der Implementierung.
-	 * 
+	 *
 	 * <p>
 	 * Wenn auf der Kommandozeile die Option <code>-d</code> angegeben wird,
 	 * werden s&auml;mtliche Strings, die an {@link Main#printDebug(String)}
 	 * &uuml;bergeben werden, ausgegeben.
 	 * </p>
-	 * 
+	 *
 	 * <p>
 	 * Der erste String in <code>args</code>, der <em>nicht</em> mit <code>-d
 	 * </code>, <code>-t</code>, oder <code>-s</code> beginnt, wird als der Pfad
@@ -61,7 +68,7 @@ public class Main {
 	 * nachfolgenden Parameter werden ignoriert. Wird kein Dateiname angegeben,
 	 * wird die Testinstanz &uuml;ber {@link System#in} eingelesen.
 	 * </p>
-	 * 
+	 *
 	 * @param args
 	 *            Die von der Kommandozeile &uuml;bergebenen Argumente. Die
 	 *            Option <code>-d</code> aktiviert debug-Ausgaben &uuml;ber
@@ -73,9 +80,9 @@ public class Main {
 	 */
 	public static void main(String[] args) {
 		processArgs(args);
-        if (fileName == null){
-            bailOut("Keine Inputdatei angegeben!");
-        }
+		if (fileName == null) {
+			bailOut("Keine Inputdatei angegeben!");
+		}
 		SecurityManager oldsm = null;
 		try {
 			oldsm = System.getSecurityManager();
@@ -84,7 +91,7 @@ public class Main {
 		} catch (SecurityException e) {
 			bailOut("Error: SecurityManager konnte nicht gesetzt werden: " + e);
 		}
-		
+
 		CFLPInstanceReader reader = new CFLPInstanceReader(fileName);
 
 		try {
@@ -108,15 +115,15 @@ public class Main {
 	/**
 	 * Startet Ihre CFLP Implementierung mit einem Testfall und
 	 * &uuml;berpr&uuml;ft danach Ihre L&ouml;sung.
-	 * 
+	 *
 	 * @param instance Die aktuelle Probleminstanz
-	 * 
+	 *
 	 * @throws Exception
 	 *             Signalisiert eine Ausnahme
 	 */
 	protected static void run(CFLPInstance instance) throws Exception {
 		CFLPInstance originalInstance = new CFLPInstance(instance);
-		
+
 		long start = System.currentTimeMillis();
 		long end = System.currentTimeMillis();
 		long offs = end - start;
@@ -139,7 +146,7 @@ public class Main {
 
 		// speichere Endzeit
 		end = System.currentTimeMillis();
-		
+
 		// speichere Lösung
 		AbstractCFLP.BnBSolution sol = bnbRunner.getBestSolution();
 		// checke Lösung
@@ -148,31 +155,33 @@ public class Main {
 		}
 
 		int upper_bound = sol.getUpperBound();
-		
+
 		int[] solution = sol.getBestSolution();
-		if(solution.length != originalInstance.getNumCustomers())
+		if (solution.length != originalInstance.getNumCustomers())
 			bailOut("Ihre Loesung hat zu wenige/viele Kunden!");
-		
+
 		int[] usedBandwidths = new int[originalInstance.getNumFacilities()];
 		Arrays.fill(usedBandwidths, 0);
 		int[] connectedCustomers = new int[originalInstance.getNumFacilities()];
 		Arrays.fill(connectedCustomers, 0);
-		
+
 		int fIdx;
-		for(int i=0; i < originalInstance.getNumCustomers(); ++i) {
+		for (int i = 0; i < originalInstance.getNumCustomers(); ++i) {
 			fIdx = solution[i];
-			if(fIdx < 0 || fIdx >= originalInstance.getNumFacilities())
+			if (fIdx < 0 || fIdx >= originalInstance.getNumFacilities()) {
+				System.out.println("ERROR: " + fIdx);
 				bailOut("Ungueltiger Facility Index!");
-			
+			}
+
 			usedBandwidths[fIdx] += originalInstance.bandwidthOf(i);
-			if(usedBandwidths[fIdx] > originalInstance.maxBandwidth)
+			if (usedBandwidths[fIdx] > originalInstance.maxBandwidth)
 				bailOut("Eine Facility verbraucht zu viel Bandbreite!");
-			
+
 			connectedCustomers[fIdx] += 1;
-			if(connectedCustomers[fIdx] > originalInstance.maxCustomersFor(fIdx))
+			if (connectedCustomers[fIdx] > originalInstance.maxCustomersFor(fIdx))
 				bailOut("Eine Facility hat zu viele Kunden!");
 		}
-		
+
 		int objectiveValue = originalInstance.calcObjectiveValue(solution);
 
 		if (Math.abs(objectiveValue - upper_bound) > 0) {
@@ -204,7 +213,7 @@ public class Main {
 	 * &Ouml;ffnet die Eingabedatei und gibt einen {@link Scanner} zur&uuml;ck,
 	 * der von ihr liest. Falls kein Dateiname angegeben wurde, wird von
 	 * {@link System#in} gelesen.
-	 * 
+	 *
 	 * @return Einen {@link Scanner} der von der Eingabedatei liest.
 	 */
 	private static Scanner openInputFile() {
@@ -222,7 +231,7 @@ public class Main {
 	/**
 	 * Interpretiert die Parameter, die dem Programm &uuml;bergeben wurden und
 	 * gibt einen {@link Scanner} zur&uuml;ck, der von der Testinstanz liest.
-	 * 
+	 *
 	 * @param args
 	 *            Die Eingabeparameter
 	 * @return Einen {@link Scanner} der von der Eingabedatei liest.
@@ -245,7 +254,7 @@ public class Main {
 
 	/**
 	 * Gibt die Meldung <code>msg</code> aus und beendet das Programm.
-	 * 
+	 *
 	 * @param msg
 	 *            Die Meldung die ausgegeben werden soll.
 	 */
@@ -278,7 +287,7 @@ public class Main {
 	 * Gibt eine debugging Meldung aus. Wenn das Programm mit <code>-d</code>
 	 * gestartet wurde, wird <code>msg</code> zusammen mit dem Dateinamen der
 	 * Inputinstanz ausgegeben, ansonsten macht diese Methode nichts.
-	 * 
+	 *
 	 * @param msg
 	 *            Text der ausgegeben werden soll.
 	 */
@@ -293,19 +302,12 @@ public class Main {
 	 * Gibt eine debugging Meldung aus. Wenn das Programm mit <code>-d</code>
 	 * gestartet wurde, wird <code>msg</code> zusammen mit dem Dateinamen der
 	 * Inputinstanz ausgegeben, ansonsten macht diese Methode nichts.
-	 * 
+	 *
 	 * @param msg
 	 *            Object das ausgegeben werden soll.
 	 */
 	public static void printDebug(Object msg) {
 		printDebug(msg.toString());
-	}
-
-	/**
-	 * Privater Konstruktor.
-	 * 
-	 */
-	private Main() {
 	}
 
 }
